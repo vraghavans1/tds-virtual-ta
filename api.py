@@ -1,46 +1,36 @@
-# api.py
-import os
-import pickle
-import faiss
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
-from fastapi.middleware.cors import CORSMiddleware
+import faiss
+import pickle
 
 app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 class Query(BaseModel):
     question: str
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
-INDEX_PATH = "data/faiss_index/index.faiss"
-SOURCES_PATH = "data/faiss_index/sources.pkl"
+# Only load model and index once on first request
+model = None
+index = None
+sources = None
 
-print("🔍 Loading index and sources...")
-index = faiss.read_index(INDEX_PATH)
-with open(SOURCES_PATH, "rb") as f:
-    sources = pickle.load(f)
-print("✅ Ready to answer questions!")
+def load_index():
+    global model, index, sources
+    if model is None:
+        print("🔍 Loading embedding model and FAISS index...")
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+        index = faiss.read_index("data/faiss_index/index.faiss")
+        with open("data/faiss_index/sources.pkl", "rb") as f:
+            sources = pickle.load(f)
+        print("✅ Index ready.")
 
 @app.post("/api/")
 def answer_query(query: Query):
-    q_embedding = model.encode([query.question])
-    D, I = index.search(q_embedding, k=5)
-
+    load_index()
+    q_embed = model.encode([query.question])
+    D, I = index.search(q_embed, k=5)
     top_sources = [sources[i] for i in I[0]]
-    response = {
+    return {
         "answer": top_sources[0]["text"],
-        "links": [
-            {"url": src["source"], "text": src["source"]}
-            for src in top_sources
-        ]
+        "links": [{"url": s["source"], "text": s["source"]} for s in top_sources]
     }
-    return response
