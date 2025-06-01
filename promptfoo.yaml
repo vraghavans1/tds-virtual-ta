@@ -1,0 +1,45 @@
+description: "TDS Virtual TA Project Sample (not the actual evaluation)"
+
+providers:
+  - id: tds
+    provider: api
+    config:
+      url: https://virtual-ta-eqsn.onrender.com/api/
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: |
+        {
+          "question": "{{ question }}"{% if image %},
+          "image": "{{ image }}"{% endif %}
+        }
+      transformResponse: json
+
+defaultTest:
+  assert:
+    - type: is-json
+      value:
+        type: object
+        required: [answer, links]
+        properties:
+          answer: { type: string }
+          links:
+            type: array
+            items:
+              type: object
+              required: [url, text]
+              properties:
+                url: { type: string }
+                text: { type: string }
+
+tests:
+  - vars:
+      question: Should I use gpt-4o-mini or gpt-3.5 turbo?
+      image: file://project-tds-virtual-ta-q1.webp
+    assert:
+      - type: contains
+        transform: output.answer
+        value: gpt-3.5-turbo
+      - type: contains
+        transform: JSON.stringify(output.links)
+        value: discourse.onlinedegree.iitm.ac.in
