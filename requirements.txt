@@ -1,8 +1,6 @@
 fastapi
 uvicorn
-faiss-cpu
 sentence-transformers
-tqdm
-markdownify
-playwright
-beautifulsoup4
+faiss-cpu
+python-dotenv
+
