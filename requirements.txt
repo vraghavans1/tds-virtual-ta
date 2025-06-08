@@ -11,3 +11,5 @@ markdown
 python-multipart
 setuptools
 requests
+sentence-transformers
+faiss-cpu
